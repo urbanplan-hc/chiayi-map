@@ -62,7 +62,7 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 【修正】精準對接 tileserver，並使用 jpg 格式載入 1904 台灣堡圖
+        // 【修正 1】正確對接 tileserver，並使用 jpg 格式載入 1904 台灣堡圖
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${initialLayerId}-jpg-{z}-{x}-{y}`;
         
@@ -75,14 +75,14 @@
         // 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // 動態切換圖層 API
+        // 【修正 2】動態切換圖層 API，正確套用 ${ext} 變數
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
             const ext = selectedOption.getAttribute('data-ext') || 'png'; // 動態取得副檔名
             
-            // 組合出正確的中研院 API 網址
+            // 完美組合出正確的 API 網址，不再寫死 png
             const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
@@ -142,13 +142,13 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 【修正】為每一張圖指定正確的伺服器 (tileserver) 與格式 (data-ext)
+                // 【修正 3】為全台灣地圖指定正確的伺服器 (tileserver) 與格式 (data-ext)
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904年 臺灣堡圖</option>
                         <option value="JM50K_1916" data-server="tileserver" data-ext="jpg">1916年 日治五萬分之一地形圖</option>
-                        <option value="JM25K_1921" data-server="tileserver" data-ext="jpg">1921年 日治二萬五千分之一地形圖</option>
-                        <option value="AM50K_1944" data-server="tileserver" data-ext="jpg">1944年 美軍臺灣地形圖</option>
+                        <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921年 日治二萬五千分之一地形圖</option>
+                        <option value="AM50K_1944" data-server="tileserver" data-ext="png">1944年 美軍臺灣地形圖</option>
                         <option value="TM25K_1989" data-server="tileserver" data-ext="png">1989年 經建版地形圖</option>
                         <option value="TM25K_2003" data-server="tileserver" data-ext="png">2003年 經建版地形圖</option>
                     </optgroup>
