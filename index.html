@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台灣百年時空地圖</title>
-    <!-- 引入 Tailwind CSS 讓介面有現代感 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Leaflet 地圖套件的 CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; }
         #map { width: 100%; height: 100vh; }
-        /* 控制面板浮動在地圖上方 */
         #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 500px; }
     </style>
 </head>
@@ -21,13 +18,23 @@
     <div id="ui-container" class="bg-white/95 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-200">
         <h1 class="text-xl font-bold text-gray-800 mb-4 text-center">🕰️ 台灣百年時空地圖</h1>
         
-        <!-- 新增：歷史地圖切換選單 -->
+        <!-- 擴充版：歷史地圖切換選單 -->
         <div class="mb-3">
-            <label for="map-select" class="block text-sm font-medium text-gray-700 mb-1">切換左側歷史地圖：</label>
+            <label for="map-select" class="block text-sm font-medium text-gray-700 mb-1">切換歷史地圖 (左側)：</label>
             <select id="map-select" onchange="changeHistoricalMap()" 
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-800">
-                <option value="JM20K_1904">1904年 日治台灣堡圖</option>
-                <option value="AM50K_1944">1944年 美軍地形圖 (二戰時期)</option>
+                
+                <optgroup label="全台灣">
+                    <option value="JM20K_1904" data-server="tileserver">1904年 日治台灣堡圖</option>
+                    <option value="AM50K_1944" data-server="tileserver">1944年 美軍地形圖</option>
+                </optgroup>
+                
+                <optgroup label="嘉義專屬特輯">
+                    <option value="Chiayi_3K_1910s" data-server="chiayi">1910年代 嘉義市街平面圖</option>
+                    <option value="chiayi_1935" data-server="chiayi">1935年 嘉義市街圖</option>
+                    <option value="chiayi_1943" data-server="chiayi">1943年 嘉義都市計畫平面圖</option>
+                    <option value="Chiayi_aerialphoto_1945" data-server="chiayi">1945年 嘉義市舊航照空拍影像</option>
+                </optgroup>
             </select>
         </div>
 
@@ -46,40 +53,42 @@
     <!-- 地圖容器 -->
     <div id="map"></div>
 
-    <!-- 引入 Leaflet 核心 JS 與 拉桿套件 -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
 
     <script>
-        // 1. 初始化地圖 (預設中心點維持在嘉義)
+        // 初始化地圖，預設中心點嘉義車站
         const map = L.map('map').setView([23.4791, 120.4415], 14);
 
-        // 2. 加入現代地圖 (右側)
+        // 加入現代地圖 (右側)
         const modernMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 3. 加入歷史地圖 (左側預設：1904台灣堡圖)
+        // 初始化加入第一張歷史地圖 (左側)
         const historicalMap = L.tileLayer('https://gis.sinica.edu.tw/tileserver/file-exists.php?img=JM20K_1904-png-{z}-{x}-{y}', {
             maxZoom: 19,
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 4. 啟用拉桿
+        // 啟用拉桿
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // --- 新增：切換地圖的功能 ---
+        // 動態切換圖層 API
         function changeHistoricalMap() {
-            const selectedMap = document.getElementById('map-select').value;
-            // 根據選單的值，組合出中研院對應的 API 網址
-            const newUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${selectedMap}-png-{z}-{x}-{y}`;
+            const select = document.getElementById('map-select');
+            const selectedOption = select.options[select.selectedIndex];
             
-            // 直接替換圖層來源，這樣就不會破壞拉桿套件
+            const layerId = selectedOption.value;
+            // 讀取 data-server 屬性，判斷要使用 tileserver 還是 chiayi 的 API 網址
+            const serverType = selectedOption.getAttribute('data-server'); 
+            
+            const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
 
-        // 5. 搜尋地址功能
+        // 搜尋功能
         let currentMarker = null;
 
         async function searchAddress() {
@@ -103,9 +112,8 @@
                         map.removeLayer(currentMarker);
                     }
                     
-                    // 動態抓取下拉選單目前的年份文字，顯示在地標泡泡中
-                    const currentYearSelect = document.getElementById('map-select');
-                    const yearText = currentYearSelect.options[currentYearSelect.selectedIndex].text.substring(0, 5);
+                    const select = document.getElementById('map-select');
+                    const yearText = select.options[select.selectedIndex].text.substring(0, 5);
 
                     currentMarker = L.marker([lat, lon]).addTo(map)
                         .bindPopup(`<b>${address}</b><br>看看這裡 ${yearText} 是長什麼樣子！`)
@@ -118,7 +126,6 @@
             }
         }
 
-        // 綁定 Enter 鍵搜尋
         document.getElementById('address-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 searchAddress();
