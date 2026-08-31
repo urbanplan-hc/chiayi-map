@@ -91,17 +91,8 @@
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
             
-            let newUrl = '';
-            
-            // 判斷是否為嘉義市政府 WMTS 伺服器
-            if (serverType === 'chiayi_gov_wmts') {
-                // 將 Leaflet 預設的 {z}, {x}, {y} 轉換為 WMTS 的 TILEMATRIX, TILECOL, TILEROW 參數
-                newUrl = `https://3dmap.chiayi.gov.tw/wmts/?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerId}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png`;
-            } else {
-                // 維持原有中研院 API 格式
-                newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
-            }
-            
+            // 恢復純中研院的 API 網址組合邏輯
+            const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
 
@@ -143,6 +134,7 @@
                 const title = L.DomUtil.create('h1', '', titleContainer);
                 title.innerHTML = '台灣百年時空地圖';
 
+                // 擴增嘉義專屬特輯圖層
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', container);
                 select.innerHTML = `
                     <optgroup label="全台灣">
@@ -154,14 +146,27 @@
                         <option value="TM25K_2003" data-server="tileserver">2003年 經建版地形圖</option>
                     </optgroup>
                     <optgroup label="嘉義專屬特輯">
+                        <option value="chiayi_1895" data-server="chiayi">1895年 嘉義之戰鬥圖</option>
+                        <option value="Chiayi_0.6K_1906A" data-server="chiayi">1906年 嘉義城內圖</option>
+                        <option value="Chiayi_0.6K_1906B" data-server="chiayi">1906年 嘉義城外圖</option>
+                        <option value="chiayi_1909" data-server="chiayi">1909年 嘉義市區改正圖</option>
                         <option value="Chiayi_3K_1910s" data-server="chiayi">1910年代 嘉義市街平面圖</option>
+                        <option value="Chiayi_3K_1913" data-server="chiayi">1913年 嘉義市街圖</option>
+                        <option value="chiayi_1931" data-server="chiayi">1931年 嘉義市街實測圖</option>
+                        <option value="chiayi_1932" data-server="chiayi">1932年 嘉義市區計畫平面圖</option>
+                        <option value="Chiayi_6K_1933" data-server="chiayi">1933年 嘉義市區計畫平面圖</option>
                         <option value="chiayi_1935" data-server="chiayi">1935年 嘉義市街圖</option>
+                        <option value="chiayi_1936" data-server="chiayi">1936年 嘉義市職業別明細圖</option>
+                        <option value="Chiayi_6K_1938" data-server="chiayi">1938年 嘉義都市計劃平面圖</option>
+                        <option value="chiayi_12K_1940" data-server="chiayi">1940年 嘉義市內地圖</option>
                         <option value="chiayi_1943" data-server="chiayi">1943年 嘉義都市計畫平面圖</option>
+                        <option value="AMCityPlan_1945" data-server="chiayi">1945年 美軍繪製臺灣城市地圖</option>
                         <option value="Chiayi_aerialphoto_1945" data-server="chiayi">1945年 嘉義市舊航照空拍影像</option>
-                    </optgroup>
-                    <optgroup label="嘉義市政府 3D 圖資 WMTS">
-                        <!-- 需將 value 的值替換為從政府 GetCapabilities 中查到的真實 Layer ID -->
-                        <option value="請填寫嘉義市政府的真實圖層代碼" data-server="chiayi_gov_wmts">匯入市府 WMTS 圖層 (需替換代碼)</option>
+                        <option value="Chiayi_3.8K_1957" data-server="chiayi">1957年 嘉義縣街道圖</option>
+                        <option value="Chiayi_100K_1959" data-server="chiayi">1959年 嘉義縣圖</option>
+                        <option value="Chiayi_10K_1976" data-server="chiayi">1976年 嘉義市一萬分一城市圖</option>
+                        <option value="Chiayi_6K_1979" data-server="chiayi">1979年 嘉義市街圖</option>
+                        <option value="chiayi_1982" data-server="chiayi">1982年 嘉義市行政區域圖</option>
                     </optgroup>
                 `;
                 L.DomEvent.on(select, 'change', () => changeHistoricalMap(select));
