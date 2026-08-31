@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台灣百年時空地圖</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- 【修正點】改用相容性最完美的 Leaflet 1.7.1 版 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 500px; }
+        /* 稍微加粗拉桿線條，讓使用者更好點擊拖曳 */
+        .leaflet-sbs-divider { width: 4px !important; background-color: #fff !important; }
     </style>
 </head>
 <body>
@@ -18,11 +21,11 @@
     <div id="ui-container" class="bg-white/95 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-200">
         <h1 class="text-xl font-bold text-gray-800 mb-4 text-center">🕰️ 台灣百年時空地圖</h1>
         
-        <!-- 擴充版：歷史地圖切換選單 -->
+        <!-- 歷史地圖切換選單 -->
         <div class="mb-3">
             <label for="map-select" class="block text-sm font-medium text-gray-700 mb-1">切換歷史地圖 (左側)：</label>
             <select id="map-select" onchange="changeHistoricalMap()" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-800">
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-800 cursor-pointer">
                 
                 <optgroup label="全台灣">
                     <option value="JM20K_1904" data-server="tileserver">1904年 日治台灣堡圖</option>
@@ -53,7 +56,8 @@
     <!-- 地圖容器 -->
     <div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 【修正點】改用相容性最完美的 Leaflet 1.7.1 版 JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
 
     <script>
@@ -81,7 +85,6 @@
             const selectedOption = select.options[select.selectedIndex];
             
             const layerId = selectedOption.value;
-            // 讀取 data-server 屬性，判斷要使用 tileserver 還是 chiayi 的 API 網址
             const serverType = selectedOption.getAttribute('data-server'); 
             
             const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
