@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台灣百年時空地圖</title>
+    <title>嘉義百年時空地圖</title>
     <!-- 引入 Tailwind CSS (保留現代感) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Leaflet CSS -->
@@ -12,22 +12,19 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
-        /* 【修正】移除原本擋在中間的中央浮動面板 CSS 區塊 */
-        /* #ui-container { ... } (此區塊已被刪除) */
-
-        /* 【新增】自定義角落控制項的專用 CSS 樣式 (位於角落，不擋中線) */
+        /* 自定義角落控制項的專用 CSS 樣式 */
         .leaflet-bottom.leaflet-right .leaflet-custom-history-control {
             margin-right: 10px;
             margin-bottom: 10px;
-            pointer-events: auto; /* 確保可以點擊控制項內部按鈕 */
+            pointer-events: auto; 
             background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(4px);
             padding: 16px;
             border-radius: 12px;
             border: 1px solid rgba(229, 231, 235, 0.5);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            width: 320px; /* 控制面板寬度 */
-            z-index: 1001; /* 在角落控制項中最上層 */
+            width: 320px; 
+            z-index: 1001; 
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -61,15 +58,12 @@
             line-height: 1.4;
         }
 
-        /* 【修正】拉桿本身的 CSS (確保 z-index 足夠高，不被擋住) */
-        .leaflet-sbs-divider { z-index: 1002 !important; /* 高於所有圖層與控制項容器 */ }
-        .leaflet-sbs-range { z-index: 1003 !important; /* 確保隱藏的點擊範圍更上層 */ }
+        /* 拉桿本身的 CSS (確保 z-index 足夠高) */
+        .leaflet-sbs-divider { z-index: 1002 !important; }
+        .leaflet-sbs-range { z-index: 1003 !important; }
     </style>
 </head>
 <body>
-
-    <!-- 【修正】移除原本挡在中间的中央浮動面板 HTML 區塊 -->
-    <!-- <div id="ui-container" class="..."> ... </div> (此區塊已被刪除) -->
 
     <!-- 地圖容器 -->
     <div id="map"></div>
@@ -94,7 +88,7 @@
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 啟用拉桿 (z-index 將由手動 CSS 覆蓋)
+        // 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
         // 動態切換圖層 API
@@ -134,27 +128,30 @@
             }
         }
 
-        // --- 【核心修正】新增自定義角落控制項 L.Control ---
+        // --- 新增自定義角落控制項 L.Control ---
         L.Control.CustomHistory = L.Control.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
                 
-                // 關鍵：防止點擊控制項內部也觸發地圖事件 (如點擊地圖標記)
                 L.DomEvent.disableClickPropagation(container);
 
-                // 標題 (緊湊佈局)
+                // 標題 
                 const titleContainer = L.DomUtil.create('div', 'title-container', container);
                 const icon = L.DomUtil.create('span', '', titleContainer);
                 icon.innerHTML = '🕰️';
                 const title = L.DomUtil.create('h1', '', titleContainer);
                 title.innerHTML = '台灣百年時空地圖';
 
-                // 圖層選單 (下拉選單)
-                const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg', container);
+                // 圖層選單 (已加入指定的 6 種全台灣歷史地圖)
+                const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', container);
                 select.innerHTML = `
                     <optgroup label="全台灣">
-                        <option value="JM20K_1904" data-server="tileserver">1904年 日治台灣堡圖</option>
-                        <option value="AM50K_1944" data-server="tileserver">1944年 美軍地形圖</option>
+                        <option value="JM20K_1904" data-server="tileserver">1904年 臺灣堡圖</option>
+                        <option value="JM50K_1916" data-server="tileserver">1916年 日治五萬分之一地形圖</option>
+                        <option value="JM25K_1921" data-server="tileserver">1921年 日治二萬五千分之一地形圖</option>
+                        <option value="AM50K_1944" data-server="tileserver">1944年 美軍臺灣地形圖</option>
+                        <option value="TM25K_1989" data-server="tileserver">1989年 經建版地形圖</option>
+                        <option value="TM25K_2003" data-server="tileserver">2003年 經建版地形圖</option>
                     </optgroup>
                     <optgroup label="嘉義專屬特輯">
                         <option value="Chiayi_3K_1910s" data-server="chiayi">1910年代 嘉義市街平面圖</option>
@@ -176,7 +173,7 @@
                     if (e.key === 'Enter') searchAddress(input);
                 });
 
-                // 說明文字 (放置於底部)
+                // 說明文字 
                 const attribution = L.DomUtil.create('p', 'attribution', container);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
 
