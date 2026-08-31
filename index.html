@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台灣百年時空地圖</title>
+    <!-- 標題更新 -->
+    <title>嘉義古今地圖穿越</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
+        /* 將控制面板層級拉到最高，確保不會被拉桿擋住 */
         .leaflet-bottom.leaflet-right .leaflet-custom-history-control {
             margin-right: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 20px; /* 稍微提高一點避免貼齊底部 */
             pointer-events: auto; 
             background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(4px);
@@ -21,7 +23,8 @@
             border: 1px solid rgba(229, 231, 235, 0.5);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             width: 320px; 
-            z-index: 1001; 
+            z-index: 9999 !important; /* 修改點：設定為最上層 */
+            position: relative;
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -117,13 +120,15 @@
                 const titleContainer = L.DomUtil.create('div', 'flex items-center gap-2', header);
                 const icon = L.DomUtil.create('span', '', titleContainer);
                 icon.innerHTML = '🕰️';
+                
+                // 標題更新
                 const title = L.DomUtil.create('h1', 'text-[1.1rem] font-bold text-gray-800 m-0', titleContainer);
-                title.innerHTML = '台灣百年時空地圖';
+                title.innerHTML = '嘉義古今地圖穿越';
 
                 const toggleBtn = L.DomUtil.create('button', 'text-gray-500 hover:text-gray-800 focus:outline-none text-2xl leading-none font-medium', header);
                 toggleBtn.innerHTML = '−';
 
-                // 內容區塊 (將被隱藏或顯示)
+                // 內容區塊
                 const contentWrapper = L.DomUtil.create('div', 'flex flex-col gap-3 mt-4', container);
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
@@ -184,7 +189,7 @@
                     } else {
                         contentWrapper.style.display = 'none';
                         toggleBtn.innerHTML = '+';
-                        container.style.width = 'auto'; // 收合時寬度自適應
+                        container.style.width = 'auto'; 
                     }
                 });
 
