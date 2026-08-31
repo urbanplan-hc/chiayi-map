@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>嘉義時光機：你家 100 年前長什麼樣？</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-side-by-side@2.2.0/leaflet-side-by-side.min.js"></script>
+  <style>
+    body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; margin: 0; padding: 0; text-align: center; background-color: #f7f6f1; }
+    h1 { margin: 20px 0 5px; color: #3b3b3b; }
+    p { margin-bottom: 20px; color: #666; }
+    #map { width: 100vw; height: 80vh; }
+  </style>
+</head>
+<body>
+
+  <h1>嘉義時光機 🕰️</h1>
+  <p>左右滑動中線，看看嘉義市區 1931 年（日治時期）與現在的街道對照</p>
+  <div id="map"></div>
+
+  <script>
+    // 1. 初始化地圖，座標設定在嘉義火車站與噴水圓環之間 (緯度, 經度)
+    const map = L.map('map').setView([23.4791, 120.4411], 15);
+
+    // 2. 現代地圖圖層 (OpenStreetMap) - 放在右邊
+    const modernLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // 3. 嘉義專屬歷史圖層 - 放在左邊
+    // 這裡使用的是中研院「chiayi_1931」圖層 (1931年嘉義市街實測圖)
+    // 也可以改成 JM20K_1904 (1904年臺灣堡圖)
+    const chiayiHistoryLayer = L.tileLayer(
+      'https://gis.sinica.edu.tw/chiayi/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=chiayi_1931&STYLE=_null&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
+      {
+        maxZoom: 19,
+        attribution: '圖資來源：中央研究院 嘉義百年歷史地圖'
+      }
+    ).addTo(map);
+
+    // 4. 加入左右捲簾控制器 (左邊放歷史圖，右邊放現代圖)
+    L.control.sideBySide(chiayiHistoryLayer, modernLayer).addTo(map);
+  </script>
+
+</body>
+</html>
