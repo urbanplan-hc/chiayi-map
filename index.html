@@ -24,22 +24,7 @@
             z-index: 1001; 
             display: flex;
             flex-direction: column;
-            gap: 12px;
-        }
-        
-        .leaflet-custom-history-control .title-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-        
-        .leaflet-custom-history-control h1 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin: 0;
+            transition: all 0.3s ease;
         }
 
         .leaflet-custom-history-control select, 
@@ -90,8 +75,6 @@
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
-            
-            // 恢復純中研院的 API 網址組合邏輯
             const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
@@ -128,14 +111,22 @@
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
                 L.DomEvent.disableClickPropagation(container);
 
-                const titleContainer = L.DomUtil.create('div', 'title-container', container);
+                // 標題列 (包含收合按鈕)
+                const header = L.DomUtil.create('div', 'flex justify-between items-center cursor-pointer', container);
+                
+                const titleContainer = L.DomUtil.create('div', 'flex items-center gap-2', header);
                 const icon = L.DomUtil.create('span', '', titleContainer);
                 icon.innerHTML = '🕰️';
-                const title = L.DomUtil.create('h1', '', titleContainer);
+                const title = L.DomUtil.create('h1', 'text-[1.1rem] font-bold text-gray-800 m-0', titleContainer);
                 title.innerHTML = '台灣百年時空地圖';
 
-                // 擴增嘉義專屬特輯圖層
-                const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', container);
+                const toggleBtn = L.DomUtil.create('button', 'text-gray-500 hover:text-gray-800 focus:outline-none text-2xl leading-none font-medium', header);
+                toggleBtn.innerHTML = '−';
+
+                // 內容區塊 (將被隱藏或顯示)
+                const contentWrapper = L.DomUtil.create('div', 'flex flex-col gap-3 mt-4', container);
+
+                const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver">1904年 臺灣堡圖</option>
@@ -171,7 +162,7 @@
                 `;
                 L.DomEvent.on(select, 'change', () => changeHistoricalMap(select));
 
-                const searchRow = L.DomUtil.create('div', 'flex gap-2', container);
+                const searchRow = L.DomUtil.create('div', 'flex gap-2', contentWrapper);
                 const input = L.DomUtil.create('input', 'flex-1 px-4 py-2 border border-gray-300 rounded-lg', searchRow);
                 input.placeholder = '輸入地址或地標 (例: 嘉義火車站)';
                 const button = L.DomUtil.create('button', 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium', searchRow);
@@ -181,8 +172,21 @@
                     if (e.key === 'Enter') searchAddress(input);
                 });
 
-                const attribution = L.DomUtil.create('p', 'attribution', container);
+                const attribution = L.DomUtil.create('p', 'attribution', contentWrapper);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
+
+                // 綁定收合/展開事件
+                L.DomEvent.on(header, 'click', () => {
+                    if (contentWrapper.style.display === 'none') {
+                        contentWrapper.style.display = 'flex';
+                        toggleBtn.innerHTML = '−';
+                        container.style.width = '320px';
+                    } else {
+                        contentWrapper.style.display = 'none';
+                        toggleBtn.innerHTML = '+';
+                        container.style.width = 'auto'; // 收合時寬度自適應
+                    }
+                });
 
                 return container;
             }
