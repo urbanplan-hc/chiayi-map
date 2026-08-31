@@ -10,11 +10,9 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
-        /* 解決拉桿擋住面板的終極方案 */
-        /* 1. 降低拉桿透明滑動層的層級 */
+        /* 解決拉桿擋住面板 */
         .leaflet-sbs-range { z-index: 400 !important; }
         .leaflet-sbs-divider { z-index: 401 !important; }
-        /* 2. 強制將 Leaflet 右下角控制區塊提至最上層 */
         .leaflet-control-container .leaflet-bottom.leaflet-right { z-index: 9999 !important; }
 
         .leaflet-custom-history-control {
@@ -64,7 +62,7 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 【修正3 & 1】左側歷史地圖預先載入 1904年 台灣堡圖，並改用 WMTS 標準格式避免圖磚破裂
+        // 左側歷史地圖預先載入 1904年 台灣堡圖 (WMTS 格式)
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${initialLayerId}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg`;
         
@@ -84,35 +82,29 @@
             
             let newUrl = '';
             if (serverType === 'tileserver') {
-                // 【修正1】全台灣圖層改用 WMTS 請求
                 newUrl = `https://gis.sinica.edu.tw/tileserver/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerId}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg`;
             } else {
-                // 嘉義特輯維持原有 API 格式
                 newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-png-{z}-{x}-{y}`;
             }
             
             historicalMap.setUrl(newUrl);
         }
 
-        // 【修正4】改用 Google Maps API 搜尋地址
+        // 改回完全免費的 OSM 搜尋，並鎖定台灣範圍 (countrycodes=tw)
         let currentMarker = null;
         async function searchAddress(addressInput) {
             const address = addressInput.value;
             if (!address) return;
 
-            // ⚠️ 填入你的 Google Maps API Key
-            const GOOGLE_API_KEY = '請填寫你的_GOOGLE_MAPS_API_KEY';
-            
-            const query = `台灣 ${address}`;
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=tw&limit=1`;
 
             try {
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (data.status === 'OK' && data.results.length > 0) {
-                    const lat = data.results[0].geometry.location.lat;
-                    const lon = data.results[0].geometry.location.lng;
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
                     
                     map.flyTo([lat, lon], 16, { duration: 1.5 });
 
@@ -124,7 +116,7 @@
                         .bindPopup(`<b>${address}</b><br>穿越到這裡！`)
                         .openPopup();
                 } else {
-                    alert('找不到這個地址，請確認關鍵字或檢查 API Key 是否有正確綁定！');
+                    alert('找不到這個地址，請嘗試輸入更完整的路名或知名地標！');
                 }
             } catch (error) {
                 alert('搜尋發生錯誤，請稍後再試。');
@@ -137,7 +129,6 @@
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
                 L.DomEvent.disableClickPropagation(container);
 
-                // 標題列 (包含收合按鈕)
                 const header = L.DomUtil.create('div', 'flex justify-between items-center cursor-pointer', container);
                 
                 const titleContainer = L.DomUtil.create('div', 'flex items-center gap-2', header);
@@ -150,13 +141,11 @@
                 const toggleBtn = L.DomUtil.create('button', 'text-gray-500 hover:text-gray-800 focus:outline-none text-2xl leading-none font-medium', header);
                 toggleBtn.innerHTML = '−';
 
-                // 內容區塊
                 const contentWrapper = L.DomUtil.create('div', 'flex flex-col gap-3 mt-4', container);
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 select.innerHTML = `
                     <optgroup label="全台灣">
-                        <!-- 預設選中 1904 台灣堡圖 -->
                         <option value="JM20K_1904" data-server="tileserver" selected>1904年 臺灣堡圖</option>
                         <option value="JM50K_1916" data-server="tileserver">1916年 日治五萬分之一地形圖</option>
                         <option value="JM25K_1921" data-server="tileserver">1921年 日治二萬五千分之一地形圖</option>
@@ -203,7 +192,6 @@
                 const attribution = L.DomUtil.create('p', 'attribution', contentWrapper);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
 
-                // 綁定收合/展開事件
                 L.DomEvent.on(header, 'click', () => {
                     if (contentWrapper.style.display === 'none') {
                         contentWrapper.style.display = 'flex';
