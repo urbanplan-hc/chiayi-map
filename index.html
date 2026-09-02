@@ -24,7 +24,7 @@
             border-radius: 12px;
             border: 1px solid rgba(229, 231, 235, 0.5);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            width: 340px; /* 稍微加寬以容納較長的圖層名稱 */
+            width: 340px; 
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -136,14 +136,14 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 套用最新的圖層清單與正確的 API 伺服器
+                // 套用最新的全台灣圖層清單與正確的 API 伺服器
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
                         <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921-日治二萬五千分之一地形圖</option>
                         <option value="AM50K_1944" data-server="tileserver" data-ext="jpg">1944-美軍臺灣地形圖</option>
-                        <option value="TM25K_1989" data-server="tileserver" data-ext="png">1989-臺灣經建1版地形圖</option>
-                        <option value="TM25K_2001" data-server="tileserver" data-ext="png">2001-臺灣經建3版地形圖</option>
+                        <option value="TM25K_1989" data-server="chiayi" data-ext="png">1989-臺灣經建1版地形圖</option>
+                        <option value="TM25K_2001" data-server="chiayi" data-ext="png">2001-臺灣經建3版地形圖</option>
                     </optgroup>
                     <optgroup label="嘉義專屬特輯">
                         <option value="chiayi_1895" data-server="chiayi" data-ext="png">嘉義之戰鬥圖(1895)</option>
