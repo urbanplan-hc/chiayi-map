@@ -67,30 +67,36 @@
         
         const historicalMap = L.tileLayer(historicalUrl, {
             maxZoom: 19,
-            maxNativeZoom: 16,
+            maxNativeZoom: 15, // 【關鍵修正】全台灣地形圖最高只支援到 15 級，超過會自動將 15 級平滑放大，避免破圖
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
+        // 【終極防破圖機制】處理中研院 API 混用 JPG 與 PNG 的問題
+        historicalMap.on('tileerror', function(e) {
+            // 如果圖磚載入失敗，且尚未嘗試過備用格式
+            if (e.tile && !e.tile.fallbackAttempted) {
+                e.tile.fallbackAttempted = true; // 標記已嘗試，避免無限迴圈
+                const currentSrc = e.tile.src;
+                
+                // 自動切換另一種副檔名重試
+                if (currentSrc.includes('-png-')) {
+                    e.tile.src = currentSrc.replace('-png-', '-jpg-');
+                } else if (currentSrc.includes('-jpg-')) {
+                    e.tile.src = currentSrc.replace('-jpg-', '-png-');
+                }
+            }
+        });
+
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // 動態切換圖層 API，加入 WMTS 協定支援
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
             const ext = selectedOption.getAttribute('data-ext') || 'png';
-            const apiType = selectedOption.getAttribute('data-api') || 'file-exists'; // 預設使用舊版 API
             
-            let newUrl = '';
-            if (apiType === 'wmts') {
-                // 如果是 WMTS，轉換格式名稱 (jpg -> jpeg) 並組合標準 WMTS 網址
-                const format = ext === 'jpg' ? 'jpeg' : 'png';
-                newUrl = `https://gis.sinica.edu.tw/${serverType}/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerId}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/${format}`;
-            } else {
-                // 舊版直連 API
-                newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
-            }
-            
+            // 統一使用 file-exists.php 存取，如果有副檔名錯誤，上方的 tileerror 機制會自動修正
+            const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
 
@@ -147,14 +153,14 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 加入 data-api="wmts" 讓特定的圖層使用 WMTS 協定
+                // 套用最新的全台灣圖層清單與正確的 API 伺服器 (經建版設定為 chiayi)
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
                         <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921-日治二萬五千分之一地形圖</option>
-                        <option value="AM50K_1944" data-server="tileserver" data-ext="png" data-api="wmts">1944-美軍臺灣地形圖</option>
-                        <option value="TM25K_1989" data-server="chiayi" data-ext="png" data-api="wmts">1989-臺灣經建1版地形圖</option>
-                        <option value="TM25K_2001" data-server="chiayi" data-ext="png" data-api="wmts">2001-臺灣經建3版地形圖</option>
+                        <option value="AM50K_1944" data-server="tileserver" data-ext="jpg">1944-美軍臺灣地形圖</option>
+                        <option value="TM25K_1989" data-server="chiayi" data-ext="jpg">1989-臺灣經建1版地形圖</option>
+                        <option value="TM25K_2001" data-server="chiayi" data-ext="jpg">2001-臺灣經建3版地形圖</option>
                     </optgroup>
                     <optgroup label="嘉義專屬特輯">
                         <option value="chiayi_1895" data-server="chiayi" data-ext="png">嘉義之戰鬥圖(1895)</option>
