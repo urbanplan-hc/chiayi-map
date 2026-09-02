@@ -10,7 +10,6 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
-        /* 避免拉桿擋住控制面板 */
         .leaflet-sbs-range { z-index: 400 !important; }
         .leaflet-sbs-divider { z-index: 401 !important; }
         .leaflet-control-container .leaflet-bottom.leaflet-right { z-index: 9999 !important; }
@@ -25,7 +24,7 @@
             border-radius: 12px;
             border: 1px solid rgba(229, 231, 235, 0.5);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            width: 320px; 
+            width: 340px; /* 稍微加寬以容納較長的圖層名稱 */
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -62,32 +61,28 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 【修正 1】正確對接 tileserver，並使用 jpg 格式載入 1904 台灣堡圖
+        // 預設載入 1904 台灣堡圖
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${initialLayerId}-jpg-{z}-{x}-{y}`;
         
         const historicalMap = L.tileLayer(historicalUrl, {
             maxZoom: 19,
-            maxNativeZoom: 16, // 【關鍵】超過 16 級時自動放大圖磚，避免地圖放大後消失
+            maxNativeZoom: 16,
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // 【修正 2】動態切換圖層 API，正確套用 ${ext} 變數
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
-            const ext = selectedOption.getAttribute('data-ext') || 'png'; // 動態取得副檔名
+            const ext = selectedOption.getAttribute('data-ext') || 'png';
             
-            // 完美組合出正確的 API 網址，不再寫死 png
             const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
 
-        // 搜尋功能 (開源地圖搜尋，限制台灣範圍)
         let currentMarker = null;
         async function searchAddress(addressInput) {
             const address = addressInput.value;
@@ -117,7 +112,6 @@
                 }
             } catch (error) {
                 alert('搜尋發生錯誤，請稍後再試。');
-                console.error(error);
             }
         }
 
@@ -142,38 +136,85 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 【修正 3】為全台灣地圖指定正確的伺服器 (tileserver) 與格式 (data-ext)
+                // 套用最新的圖層清單與正確的 API 伺服器
                 select.innerHTML = `
                     <optgroup label="全台灣">
-                        <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904年 臺灣堡圖</option>
-                        <option value="JM50K_1916" data-server="tileserver" data-ext="jpg">1916年 日治五萬分之一地形圖</option>
-                        <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921年 日治二萬五千分之一地形圖</option>
-                        <option value="AM50K_1944" data-server="tileserver" data-ext="png">1944年 美軍臺灣地形圖</option>
-                        <option value="TM25K_1989" data-server="tileserver" data-ext="png">1989年 經建版地形圖</option>
-                        <option value="TM25K_2003" data-server="tileserver" data-ext="png">2003年 經建版地形圖</option>
+                        <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
+                        <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921-日治二萬五千分之一地形圖</option>
+                        <option value="AM50K_1944" data-server="tileserver" data-ext="jpg">1944-美軍臺灣地形圖</option>
+                        <option value="TM25K_1989" data-server="tileserver" data-ext="png">1989-臺灣經建1版地形圖</option>
+                        <option value="TM25K_2001" data-server="tileserver" data-ext="png">2001-臺灣經建3版地形圖</option>
                     </optgroup>
                     <optgroup label="嘉義專屬特輯">
-                        <option value="chiayi_1895" data-server="chiayi" data-ext="png">1895年 嘉義之戰鬥圖</option>
-                        <option value="Chiayi_0.6K_1906A" data-server="chiayi" data-ext="png">1906年 嘉義城內圖</option>
-                        <option value="Chiayi_0.6K_1906B" data-server="chiayi" data-ext="png">1906年 嘉義城外圖</option>
-                        <option value="chiayi_1909" data-server="chiayi" data-ext="png">1909年 嘉義市區改正圖</option>
-                        <option value="Chiayi_3K_1910s" data-server="chiayi" data-ext="png">1910年代 嘉義市街平面圖</option>
-                        <option value="Chiayi_3K_1913" data-server="chiayi" data-ext="png">1913年 嘉義市街圖</option>
-                        <option value="chiayi_1931" data-server="chiayi" data-ext="png">1931年 嘉義市街實測圖</option>
-                        <option value="chiayi_1932" data-server="chiayi" data-ext="png">1932年 嘉義市區計畫平面圖</option>
-                        <option value="Chiayi_6K_1933" data-server="chiayi" data-ext="png">1933年 嘉義市區計畫平面圖</option>
-                        <option value="chiayi_1935" data-server="chiayi" data-ext="png">1935年 嘉義市街圖</option>
-                        <option value="chiayi_1936" data-server="chiayi" data-ext="png">1936年 嘉義市職業別明細圖</option>
-                        <option value="Chiayi_6K_1938" data-server="chiayi" data-ext="png">1938年 嘉義都市計劃平面圖</option>
-                        <option value="chiayi_12K_1940" data-server="chiayi" data-ext="png">1940年 嘉義市內地圖</option>
-                        <option value="chiayi_1943" data-server="chiayi" data-ext="png">1943年 嘉義都市計畫平面圖</option>
-                        <option value="AMCityPlan_1945" data-server="chiayi" data-ext="png">1945年 美軍繪製臺灣城市地圖</option>
-                        <option value="Chiayi_aerialphoto_1945" data-server="chiayi" data-ext="png">1945年 嘉義市舊航照空拍影像</option>
-                        <option value="Chiayi_3.8K_1957" data-server="chiayi" data-ext="png">1957年 嘉義縣街道圖</option>
-                        <option value="Chiayi_100K_1959" data-server="chiayi" data-ext="png">1959年 嘉義縣圖</option>
-                        <option value="Chiayi_10K_1976" data-server="chiayi" data-ext="png">1976年 嘉義市一萬分一城市圖</option>
-                        <option value="Chiayi_6K_1979" data-server="chiayi" data-ext="png">1979年 嘉義市街圖</option>
-                        <option value="chiayi_1982" data-server="chiayi" data-ext="png">1982年 嘉義市行政區域圖</option>
+                        <option value="chiayi_1895" data-server="chiayi" data-ext="png">嘉義之戰鬥圖(1895)</option>
+                        <option value="Chiayi_0.6K_1906A" data-server="chiayi" data-ext="png">嘉義城內圖(1906)</option>
+                        <option value="Chiayi_0.6K_1906B" data-server="chiayi" data-ext="png">嘉義城外圖(1906)</option>
+                        <option value="chiayi_1909" data-server="chiayi" data-ext="png">嘉義市區改正圖(1909)</option>
+                        <option value="Chiayi_3K_1910s" data-server="chiayi" data-ext="png">嘉義市街平面圖(1910年代)</option>
+                        <option value="Chiayi_3K_1913" data-server="chiayi" data-ext="png">嘉義市街圖(1913)</option>
+                        <option value="chiayi_1931" data-server="chiayi" data-ext="png">嘉義市街實測圖(1931)</option>
+                        <option value="chiayi_1932" data-server="chiayi" data-ext="png">嘉義市區計畫平面圖(1932)</option>
+                        <option value="Chiayi_6K_1933" data-server="chiayi" data-ext="png">嘉義市區計畫平面圖(1933)</option>
+                        <option value="chiayi_1935" data-server="chiayi" data-ext="png">嘉義市街圖(1935)</option>
+                        <option value="chiayi_1936" data-server="chiayi" data-ext="png">嘉義市職業別明細圖(1936)</option>
+                        <option value="Chiayi_6K_1938" data-server="chiayi" data-ext="png">嘉義都市計劃平面圖(1938)</option>
+                        <option value="chiayi_12K_1940" data-server="chiayi" data-ext="png">嘉義市內地圖(1940)</option>
+                        <option value="Chiayi_Minsyong_2.5K_1941" data-server="chiayi" data-ext="png">嘉義民雄地方(調查)平面圖(1941)</option>
+                        <option value="chiayi_1943" data-server="chiayi" data-ext="png">嘉義都市計畫平面圖(1943)</option>
+                        <option value="AMCityPlan_1945" data-server="chiayi" data-ext="png">1945-美軍繪製臺灣城市地圖</option>
+                        <option value="Chiayi_aerialphoto_1945" data-server="chiayi" data-ext="png">嘉義市舊航照影像(1945)</option>
+                        <option value="Chiayi_3.8K_1957" data-server="chiayi" data-ext="png">嘉義縣街道圖(1957)</option>
+                        <option value="Chiayi_100K_1959" data-server="chiayi" data-ext="png">嘉義縣圖(1959)</option>
+                        <option value="Chiayi_3K_1970s_A" data-server="chiayi" data-ext="png">嘉義市都市計畫郊區細部計畫地形測量原圖</option>
+                        <option value="Chiayi_3K_1970s_B" data-server="chiayi" data-ext="png">嘉義市都市計畫郊區細部計畫地形圖</option>
+                        <option value="Chiayi_10K_1976" data-server="chiayi" data-ext="png">嘉義市一萬分一城市圖(1976)</option>
+                        <option value="Chiayi_40K_1977" data-server="chiayi" data-ext="png">1977-嘉南大圳灌溉地給水區分圖_嘉義</option>
+                        <option value="Chiayi_6K_1979" data-server="chiayi" data-ext="png">嘉義市街圖(1979)</option>
+                        <option value="Chiayi_6K_1980" data-server="chiayi" data-ext="png">嘉義市明細圖(1980)</option>
+                        <option value="Chiayi_6K_1980s" data-server="chiayi" data-ext="png">嘉義都市計劃平面圖(1980s)</option>
+                        <option value="chiayi_1982" data-server="chiayi" data-ext="png">嘉義市行政區域圖(1982)</option>
+                        <option value="Chiayi_15K_1983" data-server="chiayi" data-ext="png">嘉義市圖(1983)</option>
+                        <option value="Chiayi_27.5K_1992" data-server="chiayi" data-ext="png">嘉義市圖(1992)</option>
+                        <option value="Map_TFB3_Chiayi" data-server="chiayi" data-ext="png">日治國有林野圖(臺南州嘉義郡)</option>
+                        <option value="map_wra_00160" data-server="chiayi" data-ext="png">大湖水庫地形圖</option>
+                    </optgroup>
+                    <optgroup label="嘉義地籍圖系列">
+                        <option value="chaiyi_tj7a1787" data-server="chiayi" data-ext="png">嘉義郡竹崎庄竹崎圖</option>
+                        <option value="chaiyi_tj7a1788" data-server="chiayi" data-ext="png">嘉義郡竹崎庄瓦厝埔圖</option>
+                        <option value="chaiyi_tj7a1800" data-server="chiayi" data-ext="png">嘉義郡竹崎庄鹿麻產圖</option>
+                        <option value="chaiyi_tj7a1805" data-server="chiayi" data-ext="png">嘉義市(街)北社尾圖</option>
+                        <option value="chaiyi_tj7a1809" data-server="chiayi" data-ext="png">嘉義市(街)埤子頭圖</option>
+                        <option value="chaiyi_tj7a1810" data-server="chiayi" data-ext="png">嘉義市(街)盧厝圖</option>
+                        <option value="chaiyi_tj7a1812" data-server="chiayi" data-ext="png">嘉義市(街)竹子腳圖</option>
+                        <option value="chaiyi_tj7a1813" data-server="chiayi" data-ext="png">嘉義市(街)臺斗坑圖</option>
+                        <option value="chaiyi_tj7a1820" data-server="chiayi" data-ext="png">嘉義市(街)竹圍子圖</option>
+                        <option value="chaiyi_tj7a1821" data-server="chiayi" data-ext="png">嘉義郡竹崎庄內埔子圖</option>
+                        <option value="chaiyi_tj7a1827" data-server="chiayi" data-ext="png">嘉義市(街)大溪厝圖</option>
+                        <option value="chaiyi_tj7a1828" data-server="chiayi" data-ext="png">嘉義郡番路庄內甕圖</option>
+                        <option value="chaiyi_tj7a1830" data-server="chiayi" data-ext="png">嘉義郡番路庄下坑圖</option>
+                        <option value="chaiyi_tj7a1836a" data-server="chiayi" data-ext="png">嘉義市(街)新高町、檜木町與山下町</option>
+                        <option value="chaiyi_tj7a1836b" data-server="chiayi" data-ext="png">嘉義市(街)白川町、玉川町圖</option>
+                        <option value="chaiyi_tj7a1844" data-server="chiayi" data-ext="png">嘉義市(街)柴頭港圖</option>
+                        <option value="chaiyi_tj7a1846" data-server="chiayi" data-ext="png">嘉義市(街)港子坪圖</option>
+                        <option value="chaiyi_tj7a1852" data-server="chiayi" data-ext="png">嘉義市(街)車店圖</option>
+                        <option value="chaiyi_tj7a1856" data-server="chiayi" data-ext="png">嘉義市(街)劉厝圖</option>
+                        <option value="chaiyi_tj7a1866" data-server="chiayi" data-ext="png">嘉義郡中埔庄社口圖</option>
+                        <option value="chaiyi_tj7a1870" data-server="chiayi" data-ext="png">嘉義郡中埔庄下六圖</option>
+                        <option value="chaiyi_tj7a1872" data-server="chiayi" data-ext="png">嘉義郡水上庄湖子內圖</option>
+                        <option value="chaiyi_tj7a1881" data-server="chiayi" data-ext="png">嘉義郡中埔庄頂六圖</option>
+                        <option value="chaiyi_tj7a1882" data-server="chiayi" data-ext="png">嘉義郡中埔庄樹頭埔圖</option>
+                        <option value="chaiyi_tj7a1883" data-server="chiayi" data-ext="png">嘉義郡水上庄巷口圖</option>
+                        <option value="chaiyi_tj7a1884" data-server="chiayi" data-ext="png">嘉義郡水上庄大堀尾圖</option>
+                        <option value="chaiyi_tj7a1891" data-server="chiayi" data-ext="png">嘉義郡水上庄粗溪圖</option>
+                        <option value="chaiyi_tj7a1896" data-server="chiayi" data-ext="png">嘉義郡中埔庄枋樹腳圖</option>
+                        <option value="chaiyi_tj7a1897" data-server="chiayi" data-ext="png">嘉義郡水上庄三界埔圖</option>
+                        <option value="chaiyi_tj7a1900" data-server="chiayi" data-ext="png">嘉義郡中埔庄石頭厝圖</option>
+                        <option value="chaiyi_tj7a1901" data-server="chiayi" data-ext="png">嘉義郡中埔庄鹽館圖</option>
+                        <option value="chaiyi_tj7a1904" data-server="chiayi" data-ext="png">嘉義郡水上庄十一指厝圖</option>
+                        <option value="chaiyi_tj7a1911" data-server="chiayi" data-ext="png">嘉義郡中埔庄龍山腳圖</option>
+                        <option value="chaiyi_tj7a1924" data-server="chiayi" data-ext="png">嘉義郡中埔庄白芒埔圖</option>
+                        <option value="chaiyi_tj7a1934" data-server="chiayi" data-ext="png">嘉義郡中埔庄深坑圖</option>
+                        <option value="chaiyi_tj7a1941" data-server="chiayi" data-ext="png">嘉義郡中埔庄竹頭崎圖</option>
                     </optgroup>
                 `;
                 L.DomEvent.on(select, 'change', () => changeHistoricalMap(select));
@@ -195,7 +236,7 @@
                     if (contentWrapper.style.display === 'none') {
                         contentWrapper.style.display = 'flex';
                         toggleBtn.innerHTML = '−';
-                        container.style.width = '320px';
+                        container.style.width = '340px';
                     } else {
                         contentWrapper.style.display = 'none';
                         toggleBtn.innerHTML = '+';
