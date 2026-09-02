@@ -10,6 +10,7 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
+        /* 避免拉桿擋住控制面板 */
         .leaflet-sbs-range { z-index: 400 !important; }
         .leaflet-sbs-divider { z-index: 401 !important; }
         .leaflet-control-container .leaflet-bottom.leaflet-right { z-index: 9999 !important; }
@@ -52,28 +53,27 @@
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
 
     <script>
-        // 初始化地圖，預設中心點為嘉義車站
+        // 1. 初始化地圖，預設中心點為嘉義車站
         const map = L.map('map').setView([23.4791, 120.4415], 14);
 
-        // 加入現代地圖 (右側)
+        // 2. 加入現代地圖 (右側)
         const modernMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 預設載入 1904 台灣堡圖
+        // 3. 預設載入 1904 台灣堡圖
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${initialLayerId}-jpg-{z}-{x}-{y}`;
         
         const historicalMap = L.tileLayer(historicalUrl, {
             maxZoom: 19,
-            maxNativeZoom: 15, // 【關鍵修正】全台灣地形圖最高只支援到 15 級，超過會自動將 15 級平滑放大，避免破圖
+            maxNativeZoom: 15, // 最高支援到 15 級，超過自動平滑放大避免破圖
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 【終極防破圖機制】處理中研院 API 混用 JPG 與 PNG 的問題
+        // 4. 【終極防破圖機制】自動處理中研院 API 混用 JPG 與 PNG 的問題
         historicalMap.on('tileerror', function(e) {
-            // 如果圖磚載入失敗，且尚未嘗試過備用格式
             if (e.tile && !e.tile.fallbackAttempted) {
                 e.tile.fallbackAttempted = true; // 標記已嘗試，避免無限迴圈
                 const currentSrc = e.tile.src;
@@ -87,29 +87,45 @@
             }
         });
 
+        // 5. 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
+        // 6. 動態切換圖層 API
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
             const serverType = selectedOption.getAttribute('data-server'); 
             const ext = selectedOption.getAttribute('data-ext') || 'png';
             
-            // 統一使用 file-exists.php 存取，如果有副檔名錯誤，上方的 tileerror 機制會自動修正
             const newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
             historicalMap.setUrl(newUrl);
         }
 
+        // 7. 雙層備援搜尋功能
         let currentMarker = null;
         async function searchAddress(addressInput) {
-            const address = addressInput.value;
+            const address = addressInput.value.trim();
             if (!address) return;
 
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=tw&limit=1`;
+            // 自動補齊台灣，縮小範圍
+            let query = address;
+            if (!query.includes('台灣') && !query.includes('臺灣')) {
+                query = '台灣 ' + query;
+            }
+
+            // 加入 accept-language=zh-TW 強制繁體中文搜尋
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&accept-language=zh-TW&limit=1`;
 
             try {
-                const response = await fetch(url);
-                const data = await response.json();
+                let response = await fetch(url);
+                let data = await response.json();
+
+                // 備援：如果加了「台灣」找不到，就退回原本的字詞再搜一次
+                if (!data || data.length === 0) {
+                    const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=tw&accept-language=zh-TW&limit=1`;
+                    response = await fetch(fallbackUrl);
+                    data = await response.json();
+                }
 
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat);
@@ -125,13 +141,15 @@
                         .bindPopup(`<b>${address}</b><br>穿越到這裡！`)
                         .openPopup();
                 } else {
-                    alert('找不到這個地址，請嘗試輸入更完整的路名或知名地標！');
+                    alert('找不到這個地址！\n建議：加上縣市名稱（例如將「中正路」改為「嘉義市中正路」）會更精準喔。');
                 }
             } catch (error) {
                 alert('搜尋發生錯誤，請稍後再試。');
+                console.error(error);
             }
         }
 
+        // 8. 建立右下角控制面板
         L.Control.CustomHistory = L.Control.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
@@ -153,7 +171,7 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 套用最新的全台灣圖層清單與正確的 API 伺服器 (經建版設定為 chiayi)
+                // 圖層完整清單
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
@@ -249,6 +267,7 @@
                 const attribution = L.DomUtil.create('p', 'attribution', contentWrapper);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
 
+                // 控制面板收合功能
                 L.DomEvent.on(header, 'click', () => {
                     if (contentWrapper.style.display === 'none') {
                         contentWrapper.style.display = 'flex';
