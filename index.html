@@ -10,7 +10,6 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100vh; }
         
-        /* 避免拉桿擋住控制面板 */
         .leaflet-sbs-range { z-index: 400 !important; }
         .leaflet-sbs-divider { z-index: 401 !important; }
         .leaflet-control-container .leaflet-bottom.leaflet-right { z-index: 9999 !important; }
@@ -53,32 +52,27 @@
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
 
     <script>
-        // 1. 初始化地圖，預設中心點為嘉義車站
         const map = L.map('map').setView([23.4791, 120.4415], 14);
 
-        // 2. 加入現代地圖 (右側)
         const modernMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 3. 預設載入 1904 台灣堡圖
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${initialLayerId}-jpg-{z}-{x}-{y}`;
         
         const historicalMap = L.tileLayer(historicalUrl, {
             maxZoom: 19,
-            maxNativeZoom: 15, // 最高支援到 15 級，超過自動平滑放大避免破圖
+            maxNativeZoom: 15,
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 4. 【終極防破圖機制】自動處理中研院 API 混用 JPG 與 PNG 的問題
         historicalMap.on('tileerror', function(e) {
             if (e.tile && !e.tile.fallbackAttempted) {
-                e.tile.fallbackAttempted = true; // 標記已嘗試，避免無限迴圈
+                e.tile.fallbackAttempted = true; 
                 const currentSrc = e.tile.src;
                 
-                // 自動切換另一種副檔名重試
                 if (currentSrc.includes('-png-')) {
                     e.tile.src = currentSrc.replace('-png-', '-jpg-');
                 } else if (currentSrc.includes('-jpg-')) {
@@ -87,10 +81,8 @@
             }
         });
 
-        // 5. 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // 6. 動態切換圖層 API
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
@@ -101,55 +93,62 @@
             historicalMap.setUrl(newUrl);
         }
 
-        // 7. 雙層備援搜尋功能
+        // 【升級版】智慧降級搜尋地址功能
         let currentMarker = null;
         async function searchAddress(addressInput) {
             const address = addressInput.value.trim();
             if (!address) return;
 
-            // 自動補齊台灣，縮小範圍
-            let query = address;
-            if (!query.includes('台灣') && !query.includes('臺灣')) {
-                query = '台灣 ' + query;
+            // 建立搜尋佇列
+            let queries = [];
+            
+            // 1. 最精準：原地址加上台灣
+            queries.push(`台灣 ${address}`);
+            queries.push(address);
+
+            // 2. 智慧降級：如果輸入包含門牌號碼，自動切掉號碼，只搜尋到「路/街/段」
+            const streetMatch = address.match(/^(.*?[路街大道段])/);
+            if (address.includes('號') && streetMatch) {
+                queries.push(`台灣 ${streetMatch[1]}`);
+                queries.push(streetMatch[1]);
             }
 
-            // 加入 accept-language=zh-TW 強制繁體中文搜尋
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&accept-language=zh-TW&limit=1`;
+            let foundData = null;
 
-            try {
-                let response = await fetch(url);
-                let data = await response.json();
+            // 依序嘗試搜尋，找到目標就停止
+            for (let query of queries) {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&accept-language=zh-TW&limit=1`;
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
 
-                // 備援：如果加了「台灣」找不到，就退回原本的字詞再搜一次
-                if (!data || data.length === 0) {
-                    const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=tw&accept-language=zh-TW&limit=1`;
-                    response = await fetch(fallbackUrl);
-                    data = await response.json();
-                }
-
-                if (data && data.length > 0) {
-                    const lat = parseFloat(data[0].lat);
-                    const lon = parseFloat(data[0].lon);
-                    
-                    map.flyTo([lat, lon], 16, { duration: 1.5 });
-
-                    if (currentMarker) {
-                        map.removeLayer(currentMarker);
+                    if (data && data.length > 0) {
+                        foundData = data[0];
+                        break; 
                     }
-                    
-                    currentMarker = L.marker([lat, lon]).addTo(map)
-                        .bindPopup(`<b>${address}</b><br>穿越到這裡！`)
-                        .openPopup();
-                } else {
-                    alert('找不到這個地址！\n建議：加上縣市名稱（例如將「中正路」改為「嘉義市中正路」）會更精準喔。');
+                } catch (error) {
+                    console.error('OSM 搜尋發生錯誤:', error);
                 }
-            } catch (error) {
-                alert('搜尋發生錯誤，請稍後再試。');
-                console.error(error);
+            }
+
+            if (foundData) {
+                const lat = parseFloat(foundData.lat);
+                const lon = parseFloat(foundData.lon);
+                
+                map.flyTo([lat, lon], 16, { duration: 1.5 });
+
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+                
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>${address}</b><br>穿越到這裡！`)
+                    .openPopup();
+            } else {
+                alert('開源地圖庫找不到這個精確地址！\n建議：嘗試輸入知名地標，或只輸入「縣市+路名」（例如將「中山路160號」改為「嘉義市中山路」）。');
             }
         }
 
-        // 8. 建立右下角控制面板
         L.Control.CustomHistory = L.Control.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
@@ -171,7 +170,6 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 圖層完整清單
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
@@ -267,7 +265,6 @@
                 const attribution = L.DomUtil.create('p', 'attribution', contentWrapper);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
 
-                // 控制面板收合功能
                 L.DomEvent.on(header, 'click', () => {
                     if (contentWrapper.style.display === 'none') {
                         contentWrapper.style.display = 'flex';
