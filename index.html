@@ -188,12 +188,12 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 1944 美軍地形圖已補上 data-api="wmts" 並使用 png 格式
+                // 【修正：將 1944 美軍地圖的 data-server 指向 tainan】
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
                         <option value="JM25K_1921" data-server="tileserver" data-ext="png">1921-日治二萬五千分之一地形圖</option>
-                        <option value="AM50K_1944" data-server="tileserver" data-ext="png" data-api="wmts">1944-美軍臺灣地形圖</option>
+                        <option value="AM50K_1944" data-server="tainan" data-ext="png" data-api="wmts">1944-美軍臺灣地形圖</option>
                         <option value="TM25K_1989" data-server="chiayi" data-ext="png" data-api="wmts">1989-臺灣經建1版地形圖</option>
                         <option value="TM25K_2001" data-server="chiayi" data-ext="png" data-api="wmts">2001-臺灣經建3版地形圖</option>
                     </optgroup>
