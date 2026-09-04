@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>嘉義古今地圖穿越</title>
+    
+    <!-- 網頁預覽圖與摘要設定 (Open Graph) -->
+    <meta name="description" content="在地圖上滑動拉桿，一秒穿越嘉義百年時空。比對百年前的地籍圖與美軍航照，探索歷史軌跡。">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="嘉義古今地圖穿越">
+    <meta property="og:description" content="在地圖上滑動拉桿，一秒穿越嘉義百年時空。比對百年前的地籍圖與美軍航照，探索歷史軌跡。">
+    <meta property="og:image" content="https://urbanplan-hc.github.io/chiayi-map/home.png">
+    <meta property="og:url" content="https://urbanplan-hc.github.io/chiayi-map/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="嘉義古今地圖穿越">
+    <meta name="twitter:description" content="在地圖上滑動拉桿，一秒穿越嘉義百年時空。">
+    <meta name="twitter:image" content="https://urbanplan-hc.github.io/chiayi-map/home.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
@@ -68,19 +81,16 @@
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
-        // 【升級版】終極防破圖機制：同時支援舊版直連與 WMTS 的圖片格式自動切換
         historicalMap.on('tileerror', function(e) {
             if (e.tile && !e.tile.fallbackAttempted) {
                 e.tile.fallbackAttempted = true; 
                 const currentSrc = e.tile.src;
                 
-                // 針對 file-exists.php 的替換
                 if (currentSrc.includes('-png-')) {
                     e.tile.src = currentSrc.replace('-png-', '-jpg-');
                 } else if (currentSrc.includes('-jpg-')) {
                     e.tile.src = currentSrc.replace('-jpg-', '-png-');
                 } 
-                // 針對 WMTS 協定的替換
                 else if (currentSrc.includes('image/png')) {
                     e.tile.src = currentSrc.replace('image/png', 'image/jpeg');
                 } else if (currentSrc.includes('image/jpeg')) {
@@ -91,7 +101,6 @@
 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
-        // 【修正】恢復 WMTS 切換邏輯
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
@@ -179,7 +188,7 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 【已補上 data-api="wmts" 參數】
+                // 1944 美軍地形圖已補上 data-api="wmts" 並使用 png 格式
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
