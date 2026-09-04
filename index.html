@@ -65,13 +65,16 @@
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
 
     <script>
+        // 1. 初始化地圖，預設中心點為嘉義車站
         const map = L.map('map').setView([23.4791, 120.4415], 14);
 
+        // 2. 加入現代地圖 (右側)
         const modernMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
+        // 3. 預設載入 1904 台灣堡圖
         const initialLayerId = 'JM20K_1904';
         const historicalUrl = `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${initialLayerId}-jpg-{z}-{x}-{y}`;
         
@@ -81,6 +84,7 @@
             attribution: '© 中央研究院人社中心GIS專題中心'
         }).addTo(map);
 
+        // 4. 【終極防破圖機制】自動處理中研院 API 混用 JPG 與 PNG 的問題
         historicalMap.on('tileerror', function(e) {
             if (e.tile && !e.tile.fallbackAttempted) {
                 e.tile.fallbackAttempted = true; 
@@ -99,8 +103,10 @@
             }
         });
 
+        // 5. 啟用拉桿 
         L.control.sideBySide(historicalMap, modernMap).addTo(map);
 
+        // 6. 動態切換圖層 API
         function changeHistoricalMap(selectElement) {
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const layerId = selectedOption.value;
@@ -111,7 +117,8 @@
             let newUrl = '';
             if (apiType === 'wmts') {
                 const format = ext === 'jpg' ? 'jpeg' : 'png';
-                newUrl = `https://gis.sinica.edu.tw/${serverType}/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerId}&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/${format}`;
+                // 【關鍵修正】中研院的 WMTS 規範中，STYLE 必須為 _null
+                newUrl = `https://gis.sinica.edu.tw/${serverType}/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerId}&STYLE=_null&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/${format}`;
             } else {
                 newUrl = `https://gis.sinica.edu.tw/${serverType}/file-exists.php?img=${layerId}-${ext}-{z}-{x}-{y}`;
             }
@@ -119,6 +126,7 @@
             historicalMap.setUrl(newUrl);
         }
 
+        // 7. 雙層備援搜尋功能
         let currentMarker = null;
         async function searchAddress(addressInput) {
             const address = addressInput.value.trim();
@@ -167,6 +175,7 @@
             }
         }
 
+        // 8. 建立右下角控制面板
         L.Control.CustomHistory = L.Control.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-custom-history-control');
@@ -188,7 +197,7 @@
 
                 const select = L.DomUtil.create('select', 'w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer', contentWrapper);
                 
-                // 【修正：將 1944 美軍地圖改為 AM25K_1944A 並指回 tileserver】
+                // 【修正：1944 代號改為 AM25K_1944A，伺服器為 tileserver】
                 select.innerHTML = `
                     <optgroup label="全台灣">
                         <option value="JM20K_1904" data-server="tileserver" data-ext="jpg" selected>1904-日治臺灣堡圖(明治版)</option>
@@ -284,6 +293,7 @@
                 const attribution = L.DomUtil.create('p', 'attribution', contentWrapper);
                 attribution.innerHTML = '左側：歷史地圖 | 右側：現代地圖<br>(拖曳中間拉桿進行比對)';
 
+                // 控制面板收合功能
                 L.DomEvent.on(header, 'click', () => {
                     if (contentWrapper.style.display === 'none') {
                         contentWrapper.style.display = 'flex';
